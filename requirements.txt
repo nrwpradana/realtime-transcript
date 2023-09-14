@@ -1,0 +1,2 @@
+PyAudio==0.2.12
+websockets==10.3
