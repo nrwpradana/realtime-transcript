@@ -1,1 +1,1 @@
-auth_key = "api-key"
+auth_key = st.secrets["api-key"]
