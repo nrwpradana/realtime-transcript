@@ -1,3 +1,4 @@
 pyaudio
 websockets
 streamlit
+portaudio19-dev
