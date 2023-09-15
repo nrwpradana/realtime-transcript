@@ -1,3 +1,2 @@
 pyaudio
 websockets
-streamlit_audio_recorder
