@@ -6,7 +6,7 @@ import pyaudio
 import streamlit as st
 
 import sys
-sys.setrecursionlimit()
+sys.setrecursionlimit(4000)
 
 
 if 'run' not in st.session_state:
