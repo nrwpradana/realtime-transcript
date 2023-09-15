@@ -3,7 +3,6 @@ import asyncio
 import base64
 import json
 import pyaudio
-#from configure import auth_key
 import streamlit as st
 
 if 'run' not in st.session_state:
@@ -15,24 +14,13 @@ CHANNELS = 1
 RATE = 16000
 p = pyaudio.PyAudio()
 
-# starts recording
-stream = p.open(
-    format=FORMAT,
-    channels=CHANNELS,
-    rate=RATE,
-    input=True,
-    frames_per_buffer=FRAMES_PER_BUFFER
-)
-
 auth_key = st.secrets["api-key"]
 
 def start_listening():
     st.session_state['run'] = True
 
-
 def stop_listening():
     st.session_state['run'] = False
-
 
 st.title('Realtime Transcription')
 st.write('*English only')
@@ -45,46 +33,23 @@ stop.button('Stop Listening', on_click=stop_listening)
 # the AssemblyAI endpoint we're going to hit
 URL = "wss://api.assemblyai.com/v2/realtime/ws?sample_rate=16000"
 
-
-def convert_text(textstring):
-    separator = ' '
-    punctuation = '.,;:?!'
-    vowel = 'aeiou'
-    words = textstring.split(separator)
-    newWords = []
-
-    if len(textstring) != 0:
-        print(words)
-        for word in words:
-            if word[-1] in punctuation:
-                if word[-2] in vowel:
-                    newWord = word[0:-1] + word[-1]
-                    newWords.append(newWord)
-                elif word[-2] not in vowel:
-                    newWord = word[0:-1] + word[-1]
-                    newWords.append(newWord)
-
-            elif word[-1] in vowel:
-                newWord = word
-                newWords.append(newWord)
-
-            else:
-                newWord = word
-                newWords.append(newWord)
-
-        newSentence = separator.join(newWords)
-        return newSentence
-
-
 async def send_receive():
-    print(f'Connecting websocket to url ${URL}')
+    print(f'Connecting websocket to url {URL}')
     async with websockets.connect(
             URL,
             extra_headers=(("Authorization", auth_key),),
             ping_interval=5,
             ping_timeout=20
     ) as _ws:
-        r = await asyncio.sleep(0.1)
+        # Open PyAudio stream here
+        stream = p.open(
+            format=FORMAT,
+            channels=CHANNELS,
+            rate=RATE,
+            input=True,
+            frames_per_buffer=FRAMES_PER_BUFFER
+        )
+
         print("Receiving SessionBegins ...")
         session_begins = await _ws.recv()
         print(session_begins)
@@ -96,16 +61,12 @@ async def send_receive():
                     data = stream.read(FRAMES_PER_BUFFER)
                     data = base64.b64encode(data).decode("utf-8")
                     json_data = json.dumps({"audio_data": str(data)})
-                    r = await _ws.send(json_data)
+                    await _ws.send(json_data)
                 except websockets.exceptions.ConnectionClosedError as e:
                     print(e)
                     assert e.code == 4008
                     break
-                except Exception as e:
-                    assert False, "Not a websocket 4008 error"
-                r = await asyncio.sleep(0.01)
-
-            return True
+                await asyncio.sleep(0.01)
 
         async def receive():
             while st.session_state['run']:
@@ -118,10 +79,18 @@ async def send_receive():
                     print(e)
                     assert e.code == 4008
                     break
-                except Exception as e:
-                    assert False, "Not a websocket 4008 error"
 
-        send_result, receive_result = await asyncio.gather(send(), receive())
+        send_task = asyncio.create_task(send())
+        receive_task = asyncio.create_task(receive())
 
+        await asyncio.gather(send_task, receive_task)
 
-asyncio.run(send_receive())
+        # Close PyAudio stream
+        stream.stop_stream()
+        stream.close()
+
+        # Terminate PyAudio
+        p.terminate()
+
+st.experimental_rerun()
+st.experimental_asyncio(send_receive())
