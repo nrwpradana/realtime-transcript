@@ -3,8 +3,7 @@ import asyncio
 import base64
 import json
 import pyaudio
-from configure import auth_key
-
+#from configure import auth_key
 import streamlit as st
 
 if 'run' not in st.session_state:
@@ -25,6 +24,7 @@ stream = p.open(
     frames_per_buffer=FRAMES_PER_BUFFER
 )
 
+auth_key = st.secrets["api-key"]
 
 def start_listening():
     st.session_state['run'] = True
