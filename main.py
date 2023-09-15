@@ -5,6 +5,10 @@ import json
 import pyaudio
 import streamlit as st
 
+import sys
+sys.setrecursionlimit(new_limit)
+
+
 if 'run' not in st.session_state:
     st.session_state['run'] = False
 
